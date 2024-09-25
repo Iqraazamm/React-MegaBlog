@@ -5,44 +5,52 @@ import appwriteService from '../../appwrite/config'
 import { useNavigate} from "react-router-dom"
 import { useSelector } from "react-redux"
 
-function PostForm(){
+
+function PostForm({post}){
     const {register,handleSubmit,watch,setValue,control,getValues} = useForm({
         defaultValues: {
-            title: post ?.content || '',
-            slug: post?.slug || '',
-            content: post?.content || '',
-            status: post?.status || 'active',
+            title: post ?.title ||"",
+            slug: post?.$id||"",
+            content: post?.content||"",
+            status: post?.status || "active",
         },
     })
-
-    const navigate = useNavigate()
-    const userData = useSelector(state => state.user.userData)
+    const navigate = useNavigate();
+    const userData = useSelector((state)=> state.userData);
 
     const submit = async(data) => {
+        console.log("sub")
         if(post){
-            data.image[0] ? appwriteService.uploadFile(data.image[0]) : null
-
+          const file=  data.image[0] ? appwriteService.uploadFile(data.image[0]) : null
+            console.log(file)
             if(file){
                 appwriteService.deleteFile(post.featuredImage)
             }
-            const dbPost = await appwriteService.updatePost
-            (post.$id,{
-                ...data,
-                featuredImage: file ? file.$id : undefined,
-            })
-
+            file.then((result)=>{
+                const dbPost= appwriteService.updatePost(
+                    post.$id,{
+                        ...data,
+                        featuredImage: file ? result.$id : undefined
+                    }
+                )
                 if(dbPost){
-                    navigate(`/post/${dbPost.$id}`)
+                dbPost.then((result)=>{
+                     navigate(`/post/${result.$id}`);
+                })
+                    console.log(dbPost)
+                   
                 }
-            
-        }else{
+             })
+                }     
+                //copied if error then check
+        else{
             const file = await appwriteService.uploadFile(data.image[0]);
             if(file){
                 const fileId = file.$id
                 data.featuredImage = fileId
-const dbPost = await appwriteService.createPost({
+                const dbPost = await appwriteService.createPost({
                     ...data,
-                    user: userData.$id,
+                    userId: userData.$id,
 
                 })
                 if (dbPost){
@@ -53,6 +61,7 @@ const dbPost = await appwriteService.createPost({
     }
 
     const slugTransform = useCallback((value) => {
+        if(value && typeof value === 'string')
         return value
         .trim()
         .toLowerCase()
@@ -125,4 +134,4 @@ const dbPost = await appwriteService.createPost({
 }
 
 
-export default PostForm
+export default PostForm;
